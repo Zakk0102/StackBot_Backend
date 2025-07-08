@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+websockets
+python-multipart
+openai
+azure-cognitiveservices-speech
+python-dotenv
+pydantic
+langchain
+langchain-community
+langchain-openai
