@@ -199,10 +199,6 @@ def lip_sync_message_fast(message):
     else:
         print("Rhubarb binary not found")
         return None
-            
-    except Exception as e:
-        print(f"Error in lip sync process: {e}")
-        return None
 
 def text_to_speech(text, output_path, max_retries=2):
     for attempt in range(max_retries):
