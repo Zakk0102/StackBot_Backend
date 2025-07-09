@@ -176,7 +176,7 @@ def lip_sync_message_fast(message):
             
             # Use simpler Rhubarb settings with longer timeout
             sync_result = exec_command(
-                f'timeout 30s {rhubarb_path} '  # Increased timeout to 30 seconds
+                f'timeout 120s {rhubarb_path} '  # Increased timeout to 30 seconds
                 f'-f json '
                 f'-o {output_json} '
                 f'{input_wav}'  # Simplified command - removed complex flags
