@@ -148,56 +148,63 @@ def read_json_transcript(file_path):
 
 # Optimized lip sync function with longer timeout and better error handling
 def lip_sync_message_fast(message):
-    # Speedup: Downsample audio to 16kHz mono before running Rhubarb
-    import subprocess
-    input_wav = f'audios/{message}.wav'
-    output_json = f'audios/{message}.json'
-
-    if not os.path.exists(input_wav):
-        print(f"WAV file not found: {input_wav}")
-        return None
-
-    # Downsample audio to 16kHz mono (in-place, temp file)
-    downsampled_wav = f'audios/{message}_16k.wav'
     try:
-        subprocess.run(
-            [
-                'ffmpeg', '-y', '-i', input_wav,
-                '-ar', '16000', '-ac', '1', downsampled_wav
-            ],
-            check=True, capture_output=True
-        )
-        print(f"Audio downsampled to 16kHz mono: {downsampled_wav}")
-    except Exception as e:
-        print(f"Downsampling failed, using original: {e}")
-        downsampled_wav = input_wav
-
-    rhubarb_path = './bin/Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb'
-    if os.path.exists(rhubarb_path):
-        os.chmod(rhubarb_path, 0o755)
-        print(f"Starting lip sync generation for {downsampled_wav}")
-        # Add --quiet for less console output
-        sync_result = exec_command(
-            f'timeout 60s {rhubarb_path} --quiet -f json -o {output_json} {downsampled_wav}'
-        )
-        if sync_result is not None and os.path.exists(output_json):
-            try:
-                with open(output_json, 'r') as f:
-                    json_data = json.load(f)
-                    if 'mouthCues' in json_data:
-                        print(f"Lip sync generated successfully with {len(json_data['mouthCues'])} mouth cues")
-                        return True
-                    else:
-                        print("Generated JSON doesn't contain mouthCues")
-                        return None
-            except json.JSONDecodeError:
-                print("Generated file is not valid JSON")
+        input_wav = f'audios/{message}.wav'
+        output_json = f'audios/{message}.json'
+        
+        if not os.path.exists(input_wav):
+            print(f"WAV file not found: {input_wav}")
+            return None
+        
+        # Check if audio file is valid
+        try:
+            file_size = os.path.getsize(input_wav)
+            if file_size < 1000:  # Less than 1KB is probably not valid audio
+                print(f"Audio file too small: {file_size} bytes")
+                return None
+        except OSError:
+            print("Error checking audio file size")
+            return None
+        
+        # Try to generate lip sync data with extended timeout
+        rhubarb_path = './bin/Rhubarb-Lip-Sync-1.13.0-Linux/rhubarb'
+            
+        if os.path.exists(rhubarb_path):
+            os.chmod(rhubarb_path, 0o755)
+            
+            print(f"Starting lip sync generation for {input_wav}")
+            
+            # Use simpler Rhubarb settings with longer timeout
+            sync_result = exec_command(
+                f'timeout 90s {rhubarb_path} '  # Increased timeout to 30 seconds
+                f'-f json '
+                f'-o {output_json} '
+                f'{input_wav}'  # Simplified command - removed complex flags
+            )
+            
+            if sync_result is not None and os.path.exists(output_json):
+                # Verify the JSON file is valid
+                try:
+                    with open(output_json, 'r') as f:
+                        json_data = json.load(f)
+                        if 'mouthCues' in json_data:
+                            print(f"Lip sync generated successfully with {len(json_data['mouthCues'])} mouth cues")
+                            return True
+                        else:
+                            print("Generated JSON doesn't contain mouthCues")
+                            return None
+                except json.JSONDecodeError:
+                    print("Generated file is not valid JSON")
+                    return None
+            else:
+                print("Lip sync generation failed or timed out")
                 return None
         else:
-            print("Lip sync generation failed or timed out")
+            print("Rhubarb binary not found")
             return None
-    else:
-        print("Rhubarb binary not found")
+            
+    except Exception as e:
+        print(f"Error in lip sync process: {e}")
         return None
 
 def text_to_speech(text, output_path, max_retries=2):
